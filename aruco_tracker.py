@@ -9,11 +9,23 @@ References  :
 """
 
 import numpy as np
+import sys
+sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
 import cv2
 import cv2.aruco as aruco
 import glob
+import time
 
-cap = cv2.VideoCapture(1)
+DEVICE_ID = sys.argv[1]
+# print(DEVICE_ID)
+cap = cv2.VideoCapture(int(DEVICE_ID))
+# print(cap)
+# print(cap.isOpened())
+
+WIDTH = 1280
+HEIGHT = 720
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, WIDTH)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, HEIGHT)    
 
 ####---------------------- CALIBRATION ---------------------------
 # termination criteria for the iterative algorithm
@@ -30,7 +42,7 @@ imgpoints = [] # 2d points in image plane.
 
 # iterating through all calibration images
 # in the folder
-images = glob.glob('calib_images/*.jpg')
+images = glob.glob('calib_images/checkerboard/*.jpg')
 
 for fname in images:
     img = cv2.imread(fname)
@@ -54,6 +66,15 @@ for fname in images:
 
 ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1],None,None)
 
+cnt = 0
+
+fmt = cv2.VideoWriter_fourcc('m', 'p', '4', 'v') # ファイル形式(ここではmp4)
+frame_rate = 10 # フレームレート
+size = (WIDTH, HEIGHT) # 動画の画面サイズ
+
+writer = cv2.VideoWriter('./test/outtest.mp4', fmt, frame_rate, size) # ライター作成
+
+
 ###------------------ ARUCO TRACKER ---------------------------
 while (True):
     ret, frame = cap.read()
@@ -62,7 +83,8 @@ while (True):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
     # set dictionary size depending on the aruco marker selected
-    aruco_dict = aruco.Dictionary_get(aruco.DICT_6X6_250)
+    # aruco_dict = aruco.Dictionary_get(aruco.DICT_6X6_250)
+    aruco_dict = aruco.Dictionary_get(aruco.DICT_5X5_250)    
 
     # detector parameters can be set here (List of detection parameters[3])
     parameters = aruco.DetectorParameters_create()
@@ -83,9 +105,9 @@ while (True):
         rvec, tvec ,_ = aruco.estimatePoseSingleMarkers(corners, 0.05, mtx, dist)
         #(rvec-tvec).any() # get rid of that nasty numpy value array error
 
-        for i in range(0, ids.size):
-            # draw axis for the aruco markers
-            aruco.drawAxis(frame, mtx, dist, rvec[i], tvec[i], 0.1)
+        # for i in range(0, ids.size):
+        #     # draw axis for the aruco markers
+        #     aruco.drawAxis(frame, mtx, dist, rvec[i], tvec[i], 0.1)
 
         # draw a square around the markers
         aruco.drawDetectedMarkers(frame, corners)
@@ -105,6 +127,14 @@ while (True):
 
     # display the resulting frame
     cv2.imshow('frame',frame)
+
+    cv2.imwrite('test/' + str(cnt) + '.jpg', frame)
+    cnt = cnt +1
+
+    # writer.write(frame) # 画像を1フレーム分として書き込み
+
+    time.sleep(0.1)
+
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 

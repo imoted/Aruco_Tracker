@@ -8,6 +8,8 @@ References  :
 """
 
 import numpy as np
+import sys
+sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
 import cv2
 import glob
 
